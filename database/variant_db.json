@@ -1,0 +1,17 @@
+{
+  "rs7903146": {
+    "gene": "TCF7L2",
+    "disease": "Diabetes",
+    "odds_ratio": 1.4
+  },
+  "rs429358": {
+    "gene": "APOE",
+    "disease": "Alzheimer",
+    "odds_ratio": 1.6
+  },
+  "rs80357713": {
+    "gene": "BRCA1",
+    "disease": "Breast Cancer",
+    "odds_ratio": 2.0
+  }
+}

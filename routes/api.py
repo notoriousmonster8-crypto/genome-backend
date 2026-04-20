@@ -1,46 +1,118 @@
 from fastapi import APIRouter, UploadFile, File
-from agents.graph import build_graph
-from database.db import SessionLocal
-from database.models import History
-import json
+import tempfile
+
+# 🔹 Variant + Family Pipeline
+from services.variant_parser import extract_rsids
+from services.variant_engine import compute_variant_risk
+from services.family_parser import extract_family_history
+from services.risk_fusion import combine_risks
+
+# 🔹 File Processing
+from utils.input_detector import detect_input_type
+from services.pdf_service import extract_text_from_pdf
+from services.vcf_service import parse_vcf
+from services.snp_service import parse_snp
+
+# 🔹 Explanation Agent
+from agents.explanation_agent import explanation_agent_node
 
 router = APIRouter()
-graph = build_graph()
 
+
+# ============================================
+# 🧬 PREDICT (TEXT INPUT)
+# ============================================
 @router.post("/predict")
-async def predict(data: dict):
-    result = graph.invoke({"input": data["genome"]})
+def predict(data: dict):
+    try:
+        genome = data.get("genome", "")
+        family = data.get("family_history", "")
 
-    # Save history
-    db = SessionLocal()
-    record = History(
-        genome=data["genome"],
-        result=json.dumps(result)
-    )
-    db.add(record)
-    db.commit()
+        if not genome and not family:
+            return {"error": "No input provided"}
 
-    return result
+        # 🔹 Step 1: Extract rsIDs
+        rsids = extract_rsids(genome)
+        print("RSIDs:", rsids)
 
-from services.pdf_service import extract_text_from_pdf
+        # 🔹 Step 2: Genetic Risk
+        genetic_risk = compute_variant_risk(rsids)
+        print("Genetic Risk:", genetic_risk)
 
+        # 🔹 Step 3: Family Risk
+        family_data = extract_family_history(family)
+        print("Family Data:", family_data)
+
+        # 🔹 Step 4: Combine Risks
+        final_risk = combine_risks(genetic_risk, family_data)
+        print("Final Risk:", final_risk)
+
+        # 🔹 Step 5: Explanation
+        state = {"risks": final_risk}
+        state = explanation_agent_node(state)
+
+        return state
+
+    except Exception as e:
+        print("PREDICT ERROR:", e)
+        return {"error": str(e)}
+
+
+# ============================================
+# 📂 UPLOAD (FILE INPUT)
+# ============================================
 @router.post("/upload")
-async def upload(file: UploadFile = File(...)):
-    content = await file.read()
+async def upload(
+    genome_file: UploadFile = File(...),
+    family_file: UploadFile = File(None)
+):
+    try:
+        # -------------------------
+        # 🧬 GENOME FILE
+        # -------------------------
+        genome_content = await genome_file.read()
+        genome_type = detect_input_type(genome_file.filename.lower())
 
-    if file.filename.endswith(".pdf"):
-        with open("temp.pdf", "wb") as f:
-            f.write(content)
+        if genome_type == "pdf":
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(genome_content)
+                genome_text = process_pdf(tmp.name)
 
-        text = extract_text_from_pdf("temp.pdf")
+        elif genome_type == "vcf":
+            genome_text = process_vcf(genome_content.decode(errors="ignore"))
 
-        # Simple mapping → convert medical text to pseudo genome
-        genome = "".join([
-            "G" if "high" in text.lower() else "A",
-            "C" if "risk" in text.lower() else "T"
-        ]) * 50
+        elif genome_type == "snp":
+            genome_text = process_snp(genome_content.decode(errors="ignore"))
 
-    else:
-        genome = content.decode()
+        else:
+            genome_text = genome_content.decode(errors="ignore")
 
-    return {"genome": genome}
+        # -------------------------
+        # 👨‍👩‍👧 FAMILY FILE
+        # -------------------------
+        family_text = ""
+
+        if family_file:
+            family_content = await family_file.read()
+            family_type = detect_input_type(family_file.filename.lower())
+
+            if family_type == "pdf":
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp.write(family_content)
+                    family_text = process_pdf(tmp.name)
+            else:
+                family_text = family_content.decode(errors="ignore")
+
+        # -------------------------
+        # 🔥 REUSE SAME LOGIC
+        # -------------------------
+        result = predict({
+            "genome": genome_text,
+            "family_history": family_text
+        })
+
+        return result
+
+    except Exception as e:
+        print("UPLOAD ERROR:", e)
+        return {"error": str(e)}

@@ -1,0 +1,5 @@
+{
+  "Diabetes": { "parent": 0.2, "grandparent": 0.1 },
+  "Heart Disease": { "parent": 0.25, "grandparent": 0.15 },
+  "Cancer": { "parent": 0.3, "grandparent": 0.2 }
+}

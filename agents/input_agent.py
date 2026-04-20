@@ -1,8 +1,24 @@
 from utils.parser import parse_genome
 
 def input_agent_node(state):
-    genome_text = state["input"]
+    try:
+        genome_text = state.get("genome", "")
+        family_text = state.get("family_history", "")
 
-    features = parse_genome(genome_text)
+        # 🔹 Extract features (optional, for future ML use)
+        features = parse_genome(genome_text)
 
-    return {**state, "features": features}
+        return {
+            **state,
+            "genome": genome_text,
+            "family_history": family_text,
+            "features": features
+        }
+
+    except Exception as e:
+        print("INPUT AGENT ERROR:", e)
+
+        return {
+            **state,
+            "features": {}
+        }
