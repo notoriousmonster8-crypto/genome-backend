@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.chat import router as chat_router
 from dotenv import load_dotenv
 import os
+from routes.predict_file import router as predict_file_router
 
 load_dotenv()
 
@@ -29,6 +30,7 @@ app.include_router(router)
 app.include_router(history_router)
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(predict_file_router)
 @app.get("/")
 def root():
     return {"message": "Genome API running"}
