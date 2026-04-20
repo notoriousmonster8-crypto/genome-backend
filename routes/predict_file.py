@@ -2,11 +2,10 @@ from fastapi import APIRouter, UploadFile, File
 import tempfile
 
 from utils.input_detector import detect_input_type
-from services.pdf_service import process_pdf
-from services.vcf_service import process_vcf
-from services.snp_service import process_snp
-from services.predict_service import predict_from_text
-
+from services.pdf_service import extract_text_from_pdf
+from services.vcf_service import parse_vcf
+from services.snp_service import parse_snp
+from routes.predict import predict
 router = APIRouter()
 
 @router.post("/predict-file")
