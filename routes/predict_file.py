@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File
 import tempfile
 
-from services.input_detector import detect_input_type
+from utils.input_detector import detect_input_type
 from services.pdf_service import process_pdf
 from services.vcf_service import process_vcf
 from services.snp_service import process_snp
