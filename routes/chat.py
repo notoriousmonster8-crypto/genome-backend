@@ -1,9 +1,23 @@
 from fastapi import APIRouter
-from services.chat_service import chat_response
 
 router = APIRouter()
+from services.gemini_service import generate_text
 
 @router.post("/chat")
 def chat(data: dict):
-    answer = chat_response(data["question"])
+    question = data["question"]
+    context = data.get("context", "")
+
+    prompt = f"""
+    Context:
+    {context}
+
+    Question:
+    {question}
+
+    Answer clearly based on the context.
+    """
+
+    answer = generate_text(prompt)
+
     return {"answer": answer}

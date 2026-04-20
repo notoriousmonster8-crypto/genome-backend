@@ -1,29 +1,18 @@
-from services.chat_service import generate_text
+from services.gemini_service import generate_text
+
 def explanation_agent_node(state):
-    risks = state.get("risks", {})
-    context = state.get("context", "")
-    citations = state.get("citations", [])
-
-    citation_text = "\n".join([
-        f"{c['title']} ({c['year']})"
-        for c in citations
-    ])
-
     prompt = f"""
-    Explain genome-based disease risks.
+    You are a genomic health assistant.
 
     Risks:
-    {risks}
+    {state['risks']}
 
-    Context:
-    {context}
-
-    Scientific References:
-    {citation_text}
-
-    Keep it simple but credible.
+    Explain:
+    - What these risks mean
+    - Genetic influence
+    - Keep it simple
     """
 
     explanation = generate_text(prompt)
 
-    return {**state, "explanation": explanation, "citations": citations}
+    return {**state, "explanation": explanation}

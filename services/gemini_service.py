@@ -1,24 +1,35 @@
-from google import genai
+import google.generativeai as genai
 import os
+import time
+key = os.getenv("GEMINI_API_KEY")
+print("USING GEMINI KEY:", key)
 
-def generate_text(prompt: str) -> str:
+genai.configure(api_key=key)
+model = genai.GenerativeModel("gemini-2.5-flash")
+
+def generate_text(prompt: str):
     try:
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",  # 🔥 use lighter model
-            contents=prompt
-        )
-
+        response = model.generate_content(prompt)
         return response.text
 
     except Exception as e:
         print("GEMINI ERROR:", e)
 
-        # 🔥 THIS IS THE FALLBACK (Option 3)
-        return (
-            "⚠️ AI service is temporarily busy due to usage limits.\n\n"
-            "📊 Based on your genome data, there may be moderate genetic influence on disease risks.\n"
-            "🧬 Lifestyle, environment, and medical consultation are important for accurate interpretation.\n\n"
-            "👉 Please try again in a few minutes."
-        )
+        # 🔥 Retry once (quota often resets quickly)
+        try:
+            time.sleep(5)
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e2:
+            print("GEMINI RETRY FAILED:", e2)
+
+            # 🔥 Fallback (VERY IMPORTANT)
+            return """
+            AI explanation temporarily unavailable due to API limits.
+
+            Based on your genome:
+            - Higher risk values indicate stronger genetic influence
+            - Lower values indicate weaker association
+
+            Please try again later.
+            """
